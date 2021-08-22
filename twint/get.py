@@ -1,3 +1,5 @@
+import os
+
 from async_timeout import timeout
 from datetime import datetime
 from bs4 import BeautifulSoup
@@ -135,7 +137,8 @@ async def RequestUrl(config, init):
     response = await Request(_url, params=params, connector=_connector, headers=_headers)
 
     if config.Debug:
-        print(_serialQuery, file=open("twint-request_urls.log", "a", encoding="utf-8"))
+        with open(os.getenv("TWINT_DEBUG_LOG_FILE", "twint-request_urls.log"), "a", encoding="utf-8") as f:
+            print(_serialQuery, file=f)
 
     return response
 

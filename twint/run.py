@@ -1,5 +1,6 @@
 import sys, os, datetime
 from asyncio import get_event_loop, TimeoutError, ensure_future, new_event_loop, set_event_loop
+from collections import defaultdict
 
 from . import datelock, feed, get, output, verbose, storage
 from .token import TokenExpiryException
@@ -20,7 +21,7 @@ class Twint:
         logme.debug(__name__ + ':Twint:__init__')
         if config.Resume is not None and (config.TwitterSearch or config.Followers or config.Following):
             logme.debug(__name__ + ':Twint:__init__:Resume')
-            self.init = self.get_resume(config.Resume)
+            self.init = self.get_resume(config.Resume, config.Username)
         else:
             self.init = -1
 
@@ -48,12 +49,12 @@ class Twint:
             logme.debug(__name__ + ':Twint:__init__:pandas_clean')
             storage.panda.clean()
 
-    def get_resume(self, resumeFile):
-        if not os.path.exists(resumeFile):
+    def get_resume(self, resumeDict, username):
+        if not (isinstance(resumeDict, dict) or isinstance(resumeDict, defaultdict)):
             return '-1'
-        with open(resumeFile, 'r') as rFile:
-            _init = rFile.readlines()[-1].strip('\n')
-            return _init
+        if username in resumeDict and type(resumeDict[username]) is list and len(resumeDict[username]) > 0:
+            return resumeDict[username][-1]
+        return '-1'
 
     async def Feed(self):
         logme.debug(__name__ + ':Twint:Feed')
@@ -78,8 +79,7 @@ class Twint:
                     if len(self.feed) == 0 and len(self.init) == 0:
                         while (len(self.feed) == 0 or len(self.init) == 0) and favorite_err_cnt < 5:
                             self.user_agent = await get.RandomUserAgent(wa=False)
-                            response = await get.RequestUrl(self.config, self.init,
-                                                            headers=[("User-Agent", self.user_agent)])
+                            response = await get.RequestUrl(self.config, self.init)
                             self.feed, self.init = feed.MobileFav(response)
                             favorite_err_cnt += 1
                             time.sleep(1)
@@ -146,8 +146,10 @@ class Twint:
                     "[!] if you get this error but you know for sure that more tweets exist, please open an issue and "
                     "we will investigate it!")
                 break
-        if self.config.Resume:
-            print(self.init, file=open(self.config.Resume, "a", encoding="utf-8"))
+        if self.config.Resume is not None:
+            if not (isinstance(self.config.Resume, dict) or isinstance(self.config.Resume, defaultdict)):
+                self.config.Resume = defaultdict(list)
+            self.config.Resume[self.config.Username].append(self.init)
 
     async def follow(self):
         await self.Feed()

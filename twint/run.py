@@ -50,10 +50,8 @@ class Twint:
             storage.panda.clean()
 
     def get_resume(self, resumeDict, username):
-        if not (isinstance(resumeDict, dict) or isinstance(resumeDict, defaultdict)):
-            return '-1'
-        if username in resumeDict and type(resumeDict[username]) is list and len(resumeDict[username]) > 0:
-            return resumeDict[username][-1]
+        if isinstance(resumeDict, dict) and username in resumeDict and type(resumeDict[username]) is str:
+            return resumeDict[username]
         return '-1'
 
     async def Feed(self):
@@ -147,9 +145,9 @@ class Twint:
                     "we will investigate it!")
                 break
         if self.config.Resume is not None:
-            if not (isinstance(self.config.Resume, dict) or isinstance(self.config.Resume, defaultdict)):
-                self.config.Resume = defaultdict(list)
-            self.config.Resume[self.config.Username].append(self.init)
+            if not isinstance(self.config.Resume, dict):
+                self.config.Resume = defaultdict(str)
+            self.config.Resume[self.config.Username] = self.init
 
     async def follow(self):
         await self.Feed()
